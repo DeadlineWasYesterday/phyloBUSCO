@@ -55,7 +55,7 @@ done | parallel -j ${2} bash -c
 
 cd ../stock_alignments
 
-catfasta2phyml -cfs *sfirst.efa > super.afa &
+catfasta2phyml -cfs *sfirst.efa > super.afa 
 
 cd ../
 
