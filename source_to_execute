@@ -61,6 +61,8 @@ cd ../
 
 python site_selector.py
 
+python mensur_dlakil_biostar.py clean_alignment.afa final_alignment.afa 0.4
+
 iqtree -s final_alignment.afa -pre ${pre} -nt AUTO -m JTT+I+R8 -bb 1000 -alrt 1000 --threads-max ${2}
 
 Rscript -e 'if (!require("ape")) install.packages("ape",repos="https://cloud.r-project.org")'
