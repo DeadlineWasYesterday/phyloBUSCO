@@ -10,9 +10,10 @@ rm -r phyloBUSCO-main/
 cd stock_alignments/
 for i in *
 do
-echo "gzip -d ${i}"
+echo "gzip -dq ${i}"
 done | parallel -j ${2} bash -c
 
+cd ../
 
 #activate conda env
 conda activate phyloBUSCO-beta
