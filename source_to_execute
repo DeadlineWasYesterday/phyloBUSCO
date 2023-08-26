@@ -1,0 +1,71 @@
+#it is recommended to make a new directory with the new genome before sourcing this script
+#it is good practice to make sure fasta headers don't include hyphens
+
+
+#download zip and prepare directory
+wget https://github.com/DeadlineWasYesterday/phyloBUSCO/archive/refs/heads/main.zip
+unzip main.zip
+mv phyloBUSCO-main/* . 
+rm -r phyloBUSCO-main/
+cd stock_alignments/
+for i in *
+do
+echo "gzip -d ${i}"
+done | parallel -j ${2} bash -c
+
+
+#activate conda env
+conda activate phyloBUSCO-beta
+
+pre=$(echo $1 | rev | cut -f1 -d'/' | rev | cut -f1 -d'.')
+
+#run miniBUSCO
+compleasm run -l embryophyta -t ${2} -a ${1} -o ${pre}_minibusco
+
+
+
+#extract orthologs
+mkdir single_copy_genes
+
+cat ${pre}_minibusco/embryophyta_odb10/gene_marker.fasta | paste - - > gene_marker.tsv
+
+awk '$2 == "Single"' ${pre}_minibusco/embryophyta_odb10/full_table.tsv | cut -f1 > single_copy.list
+
+while read -r a 
+do
+grep -A1 ">${a}_" ${pre}_minibusco/embryophyta_odb10/gene_marker.fasta | cut -f1 -d'_' | sed "s/${a}/${pre}/" > single_copy_genes/${a}.fasta
+done < single_copy.list
+
+
+
+#find best hit and anchor to alignment
+cd single_copy_genes
+
+for i in *.fasta
+do
+echo "blastp -query ${i} -subject ../stock_alignments/${i} -outfmt '6 qseqid sseqid sstart qseq sseq' | head -n1 > ${i}.bout"
+done | parallel -j ${2} bash -c
+
+for i in *.fasta
+do
+echo "python ../anchor.py ${i}"
+done | parallel -j ${2} bash -c
+
+
+cd ../stock_alignments
+
+catfasta2phyml -cfs *sfirst.efa > super.afa &
+
+cd ../
+
+python site_selector.py
+
+iqtree -s final_alignment.afa -pre ${pre} -nt AUTO -m JTT+I+R8 -bb 1000 -alrt 1000 --threads-max ${2}
+
+Rscript -e 'if (!require("ape")) install.packages("ape",repos="https://cloud.r-project.org")'
+
+Rscript make_tree.R ${pre}
+
+
+#remove stuff
+rm -r stock_alignments/
